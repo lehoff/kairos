@@ -54,7 +54,7 @@ stop_timer(ServerName, TimerName) ->
     gen_server:call(?SERVER, {start,{ServerName, TimerName}}).
 
 expire(ServerName, TimerName) ->
-    gen_server:call(?SERVER, {expire, {ServerName, TimerName}}).
+    gen_server:cast(?SERVER, {expire, {ServerName, TimerName}}).
 
 timer_status(ServerName, TimerName) ->
     gen_server:call(?SERVER, {timer_status, {ServerName, TimerName}}).
@@ -80,12 +80,13 @@ handle_call({stop_server, Server}, _From, State) ->
     {reply, ok, State#state{servers = lists:delete(Server, State#state.servers)}};
 handle_call({start_timer, {Server, Timer, Duration}}, _From, State) ->
     Now = time_stamp(),
-    chronos:start_timer(Server, Timer, Duration,
-                        {timer_expiry, expire, [Server, Timer, Duration]}),
-    case lists:keyfind({Server,Timer}, State#state.started) of
+    case lists:keyfind({Server,Timer}, 1, State#state.started) of
         false ->
-                {reply, ok, State#state{started= [{{Server,Timer}, {Now, Duration}}
-                                                     | State#state.started ]}};
+            Reply =
+                chronos:start_timer(Server, Timer, Duration,
+                                    {timer_expiry, expire, [Server, Timer]}),
+            {reply, Reply, State#state{started= [{{Server,Timer}, {Now, Duration}}
+                                                 | State#state.started ]}};
         _ ->
             {reply,
              {error, "Starting the same timer twice - must be tested elsewhere"},
@@ -106,22 +107,24 @@ handle_call({timer_status, {_Server, _Timer}=Key}, _From, State) ->
             {{_, StartInfo}, {_, StopTime}, false} ->
                 {stopped, {StartInfo, StopTime}};
             {{_, {StartTime, Duration}}, false, {_, ExpiryTime}} ->
-                {expired, {StartTime, Duration, ExpiryTime - StartTime}};
+                {expired, {StartTime, Duration, round((ExpiryTime - StartTime) / 10000)}};
             Other ->
                 {error, {incorrect_timer_status, Other}}
         end,
     {reply, Reply, State}.
 
 
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast({expire, {_Server, _Timer}=Key}, State) ->
+    io:format("timer ~p expired~n", [Key]),
+    Now = time_stamp(),
+    {noreply, State#state{expired = [{Key, Now} | State#state.expired]}}.
 
 handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
     [ chronos:stop(Server)
-      || {Server,_} <- State#state.started ],
+      || Server <- State#state.servers ],
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -140,6 +143,6 @@ time_stamp() ->
 keyfind(Key, #state{started=Started,
                     stopped=Stopped,
                     expired=Expired}) ->
-    {lists:keyfind(Key, Started),
-     lists:keyfind(Key, Stopped),
-     lists:keyfind(Key, Expired)}.
+    {lists:keyfind(Key, 1, Started),
+     lists:keyfind(Key, 1, Stopped),
+     lists:keyfind(Key, 1, Expired)}.

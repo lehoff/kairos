@@ -15,34 +15,47 @@
 
 -record(state,
         {servers = [],
-         timers = [] :: [{chronos:server_name(), chronos:timer_name()}]
+         timers = [] :: [{{chronos:server_name(), chronos:timer_name()},
+                          chronos:timer_duration()}]
         }).
 
 %% Initialize the state
 initial_state() ->
     #state{
             servers = [],
-            timers = []
+            timers = orddict:new()
           }.
 
 %% Command generator, S is the state
 command(S) ->
-    frequency( [ {100, {call, timer_expiry, start_server, [server_name()]}} ]
+    frequency
+      ([ {100, {call, timer_expiry, start_server, [server_name()]}} ]
+       ++ [ {1000, {call, timer_expiry, start_timer, start_timer_args(S)}}
+          || S#state.servers /= [] ]
+
            ).
 
 %% Next state transformation, S is the current state
-next_state(S,_V,{call,timer_expiry, start_server, [ServerName]}) ->
-    S#state{ servers = [ServerName | S#state.servers] }.
+next_state(S,_V,{call, timer_expiry, start_server, [ServerName]}) ->
+    S#state{ servers = [ServerName | S#state.servers] };
+next_state(S,_V,{call, timer_expiry, start_timer, [Server, Timer, Duration]}) ->
+    S#state{ timers = orddict:store({Server,Timer}, Duration, S#state.timers) }.
 
 %% Precondition, checked before command is added to the command sequence
 precondition(S,{call,timer_expiry, start_server, [ServerName]}) ->
-    not lists:member(ServerName, S#state.servers).
+    not lists:member(ServerName, S#state.servers);
+precondition(S,{call,timer_expiry, start_timer, [Server, Timer, Duration]}) ->
+    lists:member(Server, S#state.servers) andalso
+        not orddict:is_key({Server,Timer}, S#state.timers) andalso
+        Duration > 0.
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state(S,_,<command>)
 postcondition(_S,{call,timer_expiry, start_server, [_ServerName]}, ok) ->
     true;
-postcondition(_S,{call,timer_expiry, start_server, [_ServerName]}, _Other) ->
+postcondition(_S,{call,timer_expiry, start_timer, [_Server, _Timer, _Duration]}, ok) ->
+    true;
+postcondition(_, _, _) ->
     false.
 
 prop_chronos() ->
@@ -74,7 +87,12 @@ server_name() -> {server, nat()}.
 
 timer_name() -> {timer, nat()}.
 
-timer_timeout() -> choose(10, 100).
+timer_duration() -> choose(10, 100).
+
+
+start_timer_args(S) ->
+    ?LET(Server, oneof(S#state.servers),
+         [Server, timer_name(), timer_duration()]).
 
 %%---------------------- OPERATIONS ----------------------
 

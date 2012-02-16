@@ -41,7 +41,7 @@
               timer_name/0,
               timer_duration/0]).
 
--record(state,
+-record(chronos_state,
         {running = []  :: [{timer_name(), reference()}]
         }).
 
@@ -71,22 +71,23 @@ stop_timer(ServerRef, TimerName) ->
     call(ServerRef, {stop_timer, TimerName}).
 
 
-
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
 
--spec init(server_name()) -> {'ok', #state{}} | {'stop', term()} | 'ignore'.
+-spec init(server_name()) -> {'ok', #chronos_state{}} | {'stop', term()} | 'ignore'.
 init(ServerName) ->
     gproc:reg(proc_name(ServerName)),
-    {ok, #state{}}.
+    {ok, #chronos_state{}}.
 
--spec handle_call(term(), term(), #state{}) ->
-                         {'reply', 'ok' | {'error', term()} , #state{}} |
-                         {'stop', term(), 'ok', #state{}}.
+-spec handle_call(term(), term(), #chronos_state{}) ->
+                         {'reply', 'ok' | {'error', term()} , #chronos_state{}} |
+                         {'stop', term(), 'ok', #chronos_state{}}.
+handle_call(stop, _From, State) ->
+    {stop, normal, ok, State};
 handle_call({start_timer, Name, Time, Callback}, _From,
-            #state{running=R}=State) ->
+            #chronos_state{running=R}=State) ->
     %% If the Name timer is running we clean it up.
     R1 = case lists:keytake(Name, 1, R) of
              false ->
@@ -96,66 +97,40 @@ handle_call({start_timer, Name, Time, Callback}, _From,
                  Ra
          end,
     TRefNew = erlang:start_timer(Time, self(), {Name,Callback}),
-    {reply, ok, State#state{running=[{Name,TRefNew}|R1]}};
+    {reply, ok, State#chronos_state{running=[{Name,TRefNew}|R1]}};
 handle_call({stop_timer, Name}, _From,
-            #state{running=R}=State) ->
+            #chronos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
         {value, {_, TRef}, Rnext} ->
             erlang:cancel_timer(TRef),
-            {reply, ok, State#state{running=Rnext}};
+            {reply, ok, State#chronos_state{running=Rnext}};
         false ->
             Reason = io_lib:format("Stopping ~p timer that was not running",
                                    [Name]),
             {reply, {error, Reason}, State}
     end.
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling cast messages
-%%
-%% @spec handle_cast(Msg, State) -> {noreply, State} |
-%%                                  {noreply, State, Timeout} |
-%%                                  {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=State) ->
+    NewR =
+        case lists:keytake(Timer, 1, R) of
+            {value, {_,Tref}, R1} ->
+                erlang:apply(M, F, Args),
+                R1;
+            {value, _, R1} -> %% has to ignore since TRef is not the current one
+                R1;
+            false ->
+                R
+            end,
+    {noreply, State#chronos_state{running=NewR}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, #chronos_state{running=R}=State) ->
+    [ erlang:cancel_timer(TRef)
+      || {_, TRef} <- R ],
     ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
@@ -168,7 +143,7 @@ proc_name(ServerName) -> {n, l, ServerName}.
 
 call(ServerName, Msg) ->
     {Pid, _} = gproc:await(proc_name(ServerName)),
-    gen_server:call(Pid, Msg, infinity).
+    gen_server:call(Pid, Msg, 5000).
 
 %% cast(ServerName, Msg) ->
 %%     {Pid, _} = gproc:await(proc_name(ServerName)),
