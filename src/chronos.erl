@@ -105,9 +105,7 @@ handle_call({stop_timer, Name}, _From,
             erlang:cancel_timer(TRef),
             {reply, ok, State#chronos_state{running=Rnext}};
         false ->
-            Reason = io_lib:format("Stopping ~p timer that was not running",
-                                   [Name]),
-            {reply, {error, Reason}, State}
+            {reply, {error, {not_running,Name}}, State}
     end.
 
 handle_cast(_Msg, State) ->
@@ -116,7 +114,7 @@ handle_cast(_Msg, State) ->
 handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=State) ->
     NewR =
         case lists:keytake(Timer, 1, R) of
-            {value, {_,Tref}, R1} ->
+            {value, {_,TRef}, R1} ->
                 erlang:apply(M, F, Args),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
@@ -126,7 +124,7 @@ handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=St
             end,
     {noreply, State#chronos_state{running=NewR}}.
 
-terminate(_Reason, #chronos_state{running=R}=State) ->
+terminate(_Reason, #chronos_state{running=R}) ->
     [ erlang:cancel_timer(TRef)
       || {_, TRef} <- R ],
     ok.

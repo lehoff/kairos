@@ -51,13 +51,14 @@ start_timer(ServerName, TimerName, Duration) ->
     gen_server:call(?SERVER, {start_timer,{ServerName, TimerName, Duration}}).
 
 stop_timer(ServerName, TimerName) ->
-    gen_server:call(?SERVER, {start,{ServerName, TimerName}}).
+    gen_server:call(?SERVER, {stop_timer,{ServerName, TimerName}}).
 
 expire(ServerName, TimerName) ->
     gen_server:cast(?SERVER, {expire, {ServerName, TimerName}}).
 
 timer_status(ServerName, TimerName) ->
     gen_server:call(?SERVER, {timer_status, {ServerName, TimerName}}).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -93,21 +94,29 @@ handle_call({start_timer, {Server, Timer, Duration}}, _From, State) ->
              State}
     end;
 handle_call({stop_timer, {Server, Timer}}, _From, State) ->
+    Reply = chronos:stop_timer(Server, Timer),
     Now = time_stamp(),
-    chronos:stop_timer(Server, Timer),
-    Reply = ok,
     {reply, Reply, State#state{stopped= [{{Server,Timer}, Now} | State#state.stopped ] }};
 handle_call({timer_status, {_Server, _Timer}=Key}, _From, State) ->
     Reply =
         case keyfind(Key, State) of
             {false, false, false} ->
                 not_started;
+            {false, {_,_}, false} ->
+                stopped_a_non_running;
             {{_, StartInfo}, false, false} ->
                 {started, StartInfo};
             {{_, StartInfo}, {_, StopTime}, false} ->
                 {stopped, {StartInfo, StopTime}};
-            {{_, {StartTime, Duration}}, false, {_, ExpiryTime}} ->
-                {expired, {StartTime, Duration, round((ExpiryTime - StartTime) / 10000)}};
+            {{_, {StartTime, Duration}}, Stop, {_, ExpiryTime}} ->
+                case Stop of
+                    false ->
+                        {expired, {StartTime, Duration, trunc((ExpiryTime - StartTime) / 1000)}};
+                    {_, StopTime} when StopTime >= ExpiryTime ->
+                        {expired, {StartTime, Duration, trunc((ExpiryTime - StartTime) / 1000)}};
+                    {_, StopTime} ->
+                        {expiry_after_stop, {StartTime, Duration, StopTime, ExpiryTime}}
+                end;
             Other ->
                 {error, {incorrect_timer_status, Other}}
         end,
@@ -115,7 +124,7 @@ handle_call({timer_status, {_Server, _Timer}=Key}, _From, State) ->
 
 
 handle_cast({expire, {_Server, _Timer}=Key}, State) ->
-    io:format("timer ~p expired~n", [Key]),
+    %% io:format("timer ~p expired~n", [Key]),
     Now = time_stamp(),
     {noreply, State#state{expired = [{Key, Now} | State#state.expired]}}.
 
