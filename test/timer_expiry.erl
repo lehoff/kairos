@@ -25,13 +25,21 @@
 
 -type time_stamp() :: pos_integer().
 
+-type unique_timer() :: {server_timer(), time_stamp()}.
+
+-export_type([server_timer/0,
+              time_stamp/0,
+              unique_timer/0
+             ]).
+
 -record(state,
-        { servers = [] :: [chronos:server_name()],
-          started = [] :: [{ server_timer(),
-                             {time_stamp(),
-                              chronos:timer_duration()}}],
-          stopped = [] :: [ {server_timer(), time_stamp()} ],
-          expired = [] :: [ {server_timer(), time_stamp()} ]
+        { servers   = [] :: [chronos:server_name()],
+          started   = [] :: [ unique_timer() ],
+          durations = [] :: [{unique_timer(),
+                              chronos:timer_duration()}],
+          restarted = [] :: [ {unique_timer(), time_stamp()} ],
+          stopped   = [] :: [ {unique_timer(), time_stamp()} ],
+          expired   = [] :: [ {unique_timer(), time_stamp()} ]
         }).
 
 %%%===================================================================
@@ -53,11 +61,15 @@ start_timer(ServerName, TimerName, Duration) ->
 stop_timer(ServerName, TimerName) ->
     gen_server:call(?SERVER, {stop_timer,{ServerName, TimerName}}).
 
-expire(ServerName, TimerName) ->
-    gen_server:cast(?SERVER, {expire, {ServerName, TimerName}}).
+expire(ServerName, TimerName, StartTime) ->
+    gen_server:cast(?SERVER, {expire, {{ServerName, TimerName}, StartTime}}).
 
-timer_status(ServerName, TimerName) ->
-    gen_server:call(?SERVER, {timer_status, {ServerName, TimerName}}).
+timer_status(ServerName, TimerName, StartTimeStamp) ->
+    gen_server:call(?SERVER, {timer_status, {{ServerName, TimerName}, StartTimeStamp}}).
+
+last_timer_status(ServerName, TimerName) ->
+    gen_server:call(?SERVER, {last_timer_status, {ServerName, TimerName}}).
+
 
 
 %%%===================================================================
@@ -81,52 +93,85 @@ handle_call({stop_server, Server}, _From, State) ->
     {reply, ok, State#state{servers = lists:delete(Server, State#state.servers)}};
 handle_call({start_timer, {Server, Timer, Duration}}, _From, State) ->
     Now = time_stamp(),
-    case lists:keyfind({Server,Timer}, 1, State#state.started) of
-        false ->
-            Reply =
-                chronos:start_timer(Server, Timer, Duration,
-                                    {timer_expiry, expire, [Server, Timer]}),
-            {reply, Reply, State#state{started= [{{Server,Timer}, {Now, Duration}}
-                                                 | State#state.started ]}};
-        _ ->
-            {reply,
-             {error, "Starting the same timer twice - must be tested elsewhere"},
-             State}
-    end;
-handle_call({stop_timer, {Server, Timer}}, _From, State) ->
-    Reply = chronos:stop_timer(Server, Timer),
-    Now = time_stamp(),
-    {reply, Reply, State#state{stopped= [{{Server,Timer}, Now} | State#state.stopped ] }};
-handle_call({timer_status, {_Server, _Timer}=Key}, _From, State) ->
     Reply =
-        case keyfind(Key, State) of
-            {false, false, false} ->
-                not_started;
-            {false, {_,_}, false} ->
-                stopped_a_non_running;
-            {{_, StartInfo}, false, false} ->
-                {started, StartInfo};
-            {{_, StartInfo}, {_, StopTime}, false} ->
-                {stopped, {StartInfo, StopTime}};
-            {{_, {StartTime, Duration}}, Stop, {_, ExpiryTime}} ->
-                case Stop of
-                    false ->
-                        {expired, {StartTime, Duration, trunc((ExpiryTime - StartTime) / 1000)}};
-                    {_, StopTime} when StopTime >= ExpiryTime ->
-                        {expired, {StartTime, Duration, trunc((ExpiryTime - StartTime) / 1000)}};
-                    {_, StopTime} ->
-                        {expiry_after_stop, {StartTime, Duration, StopTime, ExpiryTime}}
-                end;
+        case chronos:start_timer(Server, Timer, Duration,
+                                 {timer_expiry, expire, [Server, Timer, Now]}) of
+            ok ->
+                Now;
             Other ->
-                {error, {incorrect_timer_status, Other}}
+                Other
+        end,
+    State1 = State#state{started= [ {{{Server,Timer}, Now}, Duration}
+                                          | State#state.started ],
+                         durations = [ {{{Server,Timer}, Now}, Duration}
+                                       | State#state.durations ]
+                        },
+    State2 =
+        case last_start({Server, Timer}, State) of
+            not_started ->
+                State1;
+            StartTime ->
+                UniqueTimer = {{Server, Timer}, StartTime},
+                State1#state{ restarted = [{UniqueTimer, Now}
+                                           | State1#state.restarted] }
+        end,
+    {reply, Reply, State2};
+
+handle_call({stop_timer, {Server, Timer}}, _From, State) ->
+    case last_start({Server, Timer}, State) of
+        not_started ->
+            {reply, ok, State};
+        StartTime ->
+            UniqueTimer = {{Server, Timer}, StartTime},
+            Reply = chronos:stop_timer(Server, Timer),
+            Now = time_stamp(),
+            {reply, Reply, State#state{stopped= [{UniqueTimer, Now} | State#state.stopped ] }}
+    end;
+handle_call({timer_status, UniqueTimer}, _From, State) ->
+    Reply =
+        timer_state(UniqueTimer, State),
+    {reply, Reply, State};
+handle_call({last_timer_status, ServerTimer}, _From, State) ->
+    Reply =
+        case last_start(ServerTimer, State) of
+            not_started ->
+                never_started;
+            StartTime ->
+                timer_state({ServerTimer, StartTime}, State)
         end,
     {reply, Reply, State}.
 
 
-handle_cast({expire, {_Server, _Timer}=Key}, State) ->
+timer_state({_ServerTimer, StartTime}=UniqueTimer, State) ->
+    case keyfind(UniqueTimer, State) of
+        {false, false, false, false} ->
+            not_started;
+        {{_,Dur}, false , false, false} ->
+            {started, Dur};
+        {{_,_Dur}, false , {_,StopTime}, false} ->
+            {stopped, StopTime};
+        {{_,  Dur}, {_, RestartTime}, false, false} ->
+            {restarted, {RestartTime, Dur}};
+        {{_,  _Dur}, {_, RestartTime}, {_,StopTime}, false} ->
+            {restarted_and_stopped, {RestartTime, StopTime}};
+        {{_, Dur}, false, Stop, {_, ExpiryTime}} ->
+            case Stop of
+                false ->
+                    {expired, {StartTime, Dur, trunc((ExpiryTime - StartTime) / 1000)}};
+                {_, StopTime} when StopTime >= ExpiryTime ->
+                    {expired, {StartTime, Dur, trunc((ExpiryTime - StartTime) / 1000)}};
+                {_, StopTime} ->
+                    {expiry_after_stop, {StartTime, Dur, StopTime, ExpiryTime}}
+            end;
+        Other ->
+            {error, {incorrect_timer_status, Other}}
+    end.
+
+
+handle_cast({expire, UniqueTimer}, State) ->
     %% io:format("timer ~p expired~n", [Key]),
     Now = time_stamp(),
-    {noreply, State#state{expired = [{Key, Now} | State#state.expired]}}.
+    {noreply, State#state{expired = [{UniqueTimer, Now} | State#state.expired]}}.
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -149,9 +194,22 @@ time_stamp() ->
     Mega * 1000000 * 1000000 + Sec * 1000000 + Micro.
 
 
-keyfind(Key, #state{started=Started,
-                    stopped=Stopped,
-                    expired=Expired}) ->
-    {lists:keyfind(Key, 1, Started),
-     lists:keyfind(Key, 1, Stopped),
-     lists:keyfind(Key, 1, Expired)}.
+keyfind(UniqueTimer, #state{durations=Durations,
+                            restarted=Restarted,
+                            stopped=Stopped,
+                            expired=Expired}) ->
+
+    {lists:keyfind(UniqueTimer, 1, Durations),
+     lists:keyfind(UniqueTimer, 1, Restarted),
+     lists:keyfind(UniqueTimer, 1, Stopped),
+     lists:keyfind(UniqueTimer, 1, Expired)}.
+
+last_start(ServerTimer, #state{started=Started}) ->
+    StartTimes = [ Time || {ST, Time} <- Started,
+                           ST == ServerTimer],
+    case StartTimes == [] of
+        true ->
+            not_started;
+        false ->
+            lists:last(lists:sort(StartTimes))
+    end.
