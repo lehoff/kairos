@@ -67,8 +67,8 @@ start_timer(ServerName, TimerName, Timeout, Callback) ->
     call(ServerName, {start_timer, TimerName, Timeout, Callback}).
 
 -spec stop_timer(server_name(), timer_name()) -> 'ok' | 'not_running' | {'error',term()}.
-stop_timer(ServerRef, TimerName) ->
-    call(ServerRef, {stop_timer, TimerName}).
+stop_timer(ServerName, TimerName) ->
+    call(ServerName, {stop_timer, TimerName}).
 
 
 %%%===================================================================
