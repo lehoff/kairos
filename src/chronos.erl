@@ -115,7 +115,9 @@ handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=St
     NewR =
         case lists:keytake(Timer, 1, R) of
             {value, {_,TRef}, R1} ->
-                erlang:apply(M, F, Args),
+                spawn( fun() ->
+                               erlang:apply(M, F, Args)
+                       end ),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
                 R1;
