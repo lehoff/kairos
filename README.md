@@ -11,56 +11,23 @@ In addition to the abstraction the Chronos distribution also shows how
 to design the APIs of your code in such a way that it makes it easier
 to test the code. This part requires the use of the meck application
 by Adam Lindberg or some serious manual hacking... I am going to show
-the meck way of doing it.
+the meck way of doing it. See the `ping_test` module in the `examples`
+directory.
 
-Before describing how to use the Chronos timers I will provide a brief
+Abstracting time as it is suggested (with or with Chronos) will give
+you a design where you can test how timers work very fast. You can
+trust things will work in real life since Chronos comes with a test
+suite that shows that it does what you would expect. The burden on you
+is then to write a test that shows that your component works as it
+should for a sequence of events where some of them happens to be
+timers expiring. And you do not have to wait for the timers to expire
+since time has been abstracted.
+
+Below the description of how to use Chronos there is a brief
 overview of what the existing timer solutions has to offer so you can
 make an informed choice about which timer solution fits your problem
 the best.
 
-# Existing timer solutions
-
-## The timer module from the stdlib
-
-This is an excellent module in terms of abstraction: it provides all
-the functionality you would want in order to start and stop timers.
-
-Unfortunately there can only be one timer server for each Erlang node
-and that is that it can very easily become overloaded - see the
-[http://erlang.org/doc/efficiency_guide/commoncaveats.html] entry on
-the timer module.
-
-## Using the erlang modules timer functions
-
-As the Efficiency Guide states the `erlang:send_after/3` and
-`erlang:start_timer/3` are much more efficient than the timer module,
-but using them directly requires some book keeping which can clutter
-your code uncessarily.
-
-## Using the OTP timers
-
-I am assuming that you use Erlang/OTP to develop your software - if
-not you can skip this section! And in that case you probably never got
-to this line since the Chronos abstraction is too high level for your
-taste...
-
-For `gen_server` and `gen_fsm` you can specify a timer in the result
-tuple from your handler functions, e.g., for `gen_fsm` you can return
-`{next_state,NextStateName,NewStateData,Timeout}`. If the `gen_server`
-does not receive another message within `Timeout` milliseconds a timeout
-event will happen. The problem with this approach is that if any
-message arrives the timer is cancelled and in many cases you want to
-see a specific message before you cancel the timer or you want to have
-multiple timers running.
-
-You can have multiple timers with `gen_fsm` by using the
-`gen_fsm:start_timer/2` function. The down side is that you have to do
-book keeping of timer references if you want to cancel the timer. This
-is similar to using the erlang module's timers mentioned above.
-
-The downside is that there is not equivalent of
-`gen_fsm:start_timer/2` for `gen_server` so for that you have to use
-one of the other solutions.
 
 # The Chronos approach to timers
 
@@ -154,6 +121,52 @@ effects of the timer expiry you simply call
 
 This approach lends itself well to property based testing and unit
 testing.
+
+# Existing timer solutions
+
+## The timer module from the stdlib
+
+This is an excellent module in terms of abstraction: it provides all
+the functionality you would want in order to start and stop timers.
+
+Unfortunately there can only be one timer server for each Erlang node
+and that is that it can very easily become overloaded - see the
+[http://erlang.org/doc/efficiency_guide/commoncaveats.html] entry on
+the timer module.
+
+## Using the erlang modules timer functions
+
+As the Efficiency Guide states the `erlang:send_after/3` and
+`erlang:start_timer/3` are much more efficient than the timer module,
+but using them directly requires some book keeping which can clutter
+your code uncessarily.
+
+## Using the OTP timers
+
+I am assuming that you use Erlang/OTP to develop your software - if
+not you can skip this section! And in that case you probably never got
+to this line since the Chronos abstraction is too high level for your
+taste...
+
+For `gen_server` and `gen_fsm` you can specify a timer in the result
+tuple from your handler functions, e.g., for `gen_fsm` you can return
+`{next_state,NextStateName,NewStateData,Timeout}`. If the `gen_server`
+does not receive another message within `Timeout` milliseconds a timeout
+event will happen. The problem with this approach is that if any
+message arrives the timer is cancelled and in many cases you want to
+see a specific message before you cancel the timer or you want to have
+multiple timers running.
+
+You can have multiple timers with `gen_fsm` by using the
+`gen_fsm:start_timer/2` function. The down side is that you have to do
+book keeping of timer references if you want to cancel the timer. This
+is similar to using the erlang module's timers mentioned above.
+
+The downside is that there is not equivalent of
+`gen_fsm:start_timer/2` for `gen_server` so for that you have to use
+one of the other solutions.
+
+
 
 # FAQ
 
