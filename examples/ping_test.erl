@@ -30,7 +30,8 @@ expire_ping_timer_test() ->
 expire_silence_timer_test() ->
     ping:timer_expiry(silence_timer),
     timer:sleep(100),
-    undefined = whereis(ping).
+    undefined = whereis(ping),
+    ok.
 
 
 
