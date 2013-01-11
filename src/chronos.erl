@@ -29,7 +29,7 @@
 
 
 %% Types
--type server_name()   :: atom().
+-type server_name()   :: term().
 %%-type server_ref()    :: server_name() | pid().
 -type timer_name()    :: term().
 -type function_name() :: atom().
