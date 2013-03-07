@@ -5,8 +5,8 @@ REBAR = rebar
 build:
 	@$(REBAR) compile
 
-test: test/*.erl build
-	ct_run -dir test -pa ebin -pa deps/*/ebin
+test: build
+	@$(REBAR) ct skip_deps=true
 
 example_beams: examples/*.erl
 
