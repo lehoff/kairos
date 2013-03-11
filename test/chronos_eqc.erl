@@ -79,6 +79,8 @@ postcondition(_S,
     true;
 postcondition(_S, {call, timer_expiry, stop_timer, [_Server, _Timer]}, ok) ->
     true;
+postcondition(_S, {call, timer_expiry, stop_timer, [_Server, _Timer]}, {ok, _TimeLeft}) ->
+    true;
 postcondition(_S, {call, timer_expiry, stop_timer, [Server, Timer]}, {error,{not_running,Timer}}) ->
     valid_stop_timer_status({Server, Timer});
 postcondition(S, {call, ?MODULE, advance_time, [_Duration]}, _) ->

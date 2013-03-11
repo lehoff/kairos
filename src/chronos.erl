@@ -66,7 +66,7 @@ stop(ServerName) ->
 start_timer(ServerName, TimerName, Timeout, Callback) ->
     call(ServerName, {start_timer, TimerName, Timeout, Callback}).
 
--spec stop_timer(server_name(), timer_name()) -> 'ok' | 'not_running' | {'error',term()}.
+-spec stop_timer(server_name(), timer_name()) -> {'ok', pos_integer()} | 'not_running' | {'error',term()}.
 stop_timer(ServerName, TimerName) ->
     call(ServerName, {stop_timer, TimerName}).
 
@@ -102,8 +102,8 @@ handle_call({stop_timer, Name}, _From,
             #chronos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
         {value, {_, TRef}, Rnext} ->
-            erlang:cancel_timer(TRef),
-            {reply, ok, State#chronos_state{running=Rnext}};
+            TimeLeft = erlang:cancel_timer(TRef),
+            {reply, {ok, TimeLeft}, State#chronos_state{running=Rnext}};
         false ->
             {reply, not_running, State}
     end.
