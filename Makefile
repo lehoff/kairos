@@ -1,9 +1,12 @@
+.PHONY: build get-deps update-deps test clean deep-clean
+
+REBAR = rebar
 
 build:
-	rebar compile
+	@$(REBAR) compile
 
-test: test/*.erl build
-	ct_run -dir test -pa ebin -pa deps/*/ebin
+test: build
+	@$(REBAR) ct skip_deps=true
 
 example_beams: examples/*.erl
 
@@ -15,4 +18,13 @@ ex_shell: examples
 	erl -pz examples -pz deps/*/ebin -pz ebin
 
 clean:
-	rm -rf ebin/*.beam examples/*.beam test/*.beam
+	@$(REBAR) clean
+
+deep-clean: clean
+	@$(REBAR) delete-deps
+
+get-deps:
+	@$(REBAR) get-deps
+
+update-deps:
+	@$(REBAR) update-deps
