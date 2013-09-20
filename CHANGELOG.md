@@ -1,5 +1,11 @@
 # Change log for Chronos
 
+## v0.0.5
+
+* Use erlang.mk instead of rebar.
+* added cleaning of CT artefacts.
+
+
 ## v0.0.4
 
 * rebarified Chronos.

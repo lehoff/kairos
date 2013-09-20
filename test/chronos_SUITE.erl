@@ -1,5 +1,7 @@
 -module(chronos_SUITE).
--compile(export_all).
+
+-export([all/0,
+         chronos_eqc/1]).
 
 all() ->
     [chronos_eqc].

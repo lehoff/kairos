@@ -11,18 +11,11 @@ TEST_DEPS = meck
 
 dep_meck = git://github.com/eproxus/meck 0.7.2
 
+CT_SUITES = chronos
+
 include erlang.mk
 
-
-.PHONY: build get-deps update-deps test clean deep-clean
-
-REBAR = rebar
-
-#build:
-#	@$(REBAR) compile
-
-test: build
-	@$(REBAR) ct skip_deps=true
+test_chronos: ERLC_OPTS := $(filter-out -Werror,$(ERLC_OPTS))
 
 example_beams: examples/*.erl
 
@@ -30,17 +23,20 @@ examples: build example_beams
 	erlc -o examples examples/*.erl
 
 
-ex_shell: examples
+ex-shell: examples
 	erl -pz examples -pz deps/*/ebin -pz ebin
 
-clean_beam:
+clean-beam:
 	rm -rf ebin/*.beam examples/*.beam test/*.beam
 
-deep-clean: clean
-	@$(REBAR) delete-deps
 
-get-deps:
-	@$(REBAR) get-deps
+clean-ct:
+	rm -rf ct_run*
+	-rm -f all_runs.html
+	-rm -f index.html
+	-rm -f jquery*.js
+	-rm -f ct_default.css
+	-rm -f variables-ct*
 
-update-deps:
-	@$(REBAR) update-deps
+deep-clean: clean-beam clean-ct
+	rm -rf deps
