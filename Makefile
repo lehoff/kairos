@@ -14,9 +14,15 @@ dep_meck = git://github.com/eproxus/meck 0.7.2
 include erlang.mk
 
 
+.PHONY: build get-deps update-deps test clean deep-clean
 
-test: test/*.erl build
-	ct_run -dir test -pa ebin -pa deps/*/ebin
+REBAR = rebar
+
+#build:
+#	@$(REBAR) compile
+
+test: build
+	@$(REBAR) ct skip_deps=true
 
 example_beams: examples/*.erl
 
@@ -29,3 +35,12 @@ ex_shell: examples
 
 clean_beam:
 	rm -rf ebin/*.beam examples/*.beam test/*.beam
+
+deep-clean: clean
+	@$(REBAR) delete-deps
+
+get-deps:
+	@$(REBAR) get-deps
+
+update-deps:
+	@$(REBAR) update-deps
