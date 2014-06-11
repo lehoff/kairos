@@ -9,7 +9,7 @@ dep_gen_leader = https://github.com/abecciu/gen_leader_revival.git master
 
 TEST_DEPS = meck
 
-dep_meck = git://github.com/eproxus/meck 0.7.2
+dep_meck = git://github.com/eproxus/meck 0.8.2
 
 CT_SUITES = chronos
 
