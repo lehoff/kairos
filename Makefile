@@ -1,6 +1,6 @@
 PROJECT = chronos
 
-DEPS = gproc edown gen_leader
+DEPS = edown gen_leader gproc
 
 dep_gproc = git://github.com/uwiger/gproc 0.2.13.3
 dep_edown = https://github.com/esl/edown.git master
