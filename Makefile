@@ -1,15 +1,13 @@
 PROJECT = chronos
 
-DEPS = edown gen_leader gproc
+DEPS = gproc gen_leader
 
-dep_gproc = git://github.com/uwiger/gproc 0.2.13.3
-dep_edown = https://github.com/esl/edown.git master
-dep_gen_leader = https://github.com/abecciu/gen_leader_revival.git master
+dep_gen_leader = git https://github.com/abecciu/gen_leader_revival.git master
 
 
 TEST_DEPS = meck
 
-dep_meck = git://github.com/eproxus/meck 0.8.2
+dep_meck = git https://github.com/eproxus/meck 0.8.2
 
 CT_SUITES = chronos
 
