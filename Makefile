@@ -1,5 +1,8 @@
 PROJECT = chronos
 
+PROJECT_DESCRIPTION = chronos - a timer utility for Erlang
+PROJECT_VERSION = 0.1.0
+
 DEPS = gproc gen_leader
 
 dep_gen_leader = git https://github.com/abecciu/gen_leader_revival.git master

@@ -1,7 +1,0 @@
-{application,chronos,
-             [{description,"chronos - a timer utility for Erlang"},
-              {vsn,"0.0.5"},
-              {modules,[chronos]},
-              {registered,[]},
-              {applications,[kernel,stdlib,gproc]},
-              {start_phases,[]}]}. 
