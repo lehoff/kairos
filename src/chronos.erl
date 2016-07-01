@@ -35,7 +35,7 @@
 -type function_name() :: atom().
 -type args()          :: [term()].
 -type callback()      :: {module(), function_name(), args()}.
--type timer_duration():: pos_integer().
+-type timer_duration():: non_neg_integer().
 
 -export_type([server_name/0,
               timer_name/0,
@@ -61,12 +61,14 @@ start_link(ServerName) ->
 stop(ServerName) ->
     call(ServerName, stop).
 
--spec start_timer(server_name(), timer_name(), pos_integer(), callback()) ->
+-spec start_timer(server_name(), timer_name(), non_neg_integer(), callback()) ->
                          'ok' | {'error',term()}.
 start_timer(ServerName, TimerName, Timeout, Callback) ->
     call(ServerName, {start_timer, TimerName, Timeout, Callback}).
 
--spec stop_timer(server_name(), timer_name()) -> {'ok', pos_integer()} | 'not_running' | {'error',term()}.
+-spec stop_timer(server_name(), timer_name()) -> { 'ok', non_neg_integer()}
+                                               | 'not_running'
+                                               | {'error',term()}.
 stop_timer(ServerName, TimerName) ->
     call(ServerName, {stop_timer, TimerName}).
 
@@ -93,7 +95,7 @@ handle_call({start_timer, Name, Time, Callback}, _From,
              false ->
                  R;
              {value, {_, TRef}, Ra} ->
-                 erlang:cancel_timer(TRef),
+                 _ = erlang:cancel_timer(TRef),
                  Ra
          end,
     TRefNew = erlang:start_timer(Time, self(), {Name,Callback}),
@@ -127,7 +129,7 @@ handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=St
     {noreply, State#chronos_state{running=NewR}}.
 
 terminate(_Reason, #chronos_state{running=R}) ->
-    [ erlang:cancel_timer(TRef)
+    _ = [ erlang:cancel_timer(TRef)
       || {_, TRef} <- R ],
     ok.
 
