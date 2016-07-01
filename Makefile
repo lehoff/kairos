@@ -1,7 +1,7 @@
 PROJECT = chronos
 
 PROJECT_DESCRIPTION = chronos - a timer utility for Erlang
-PROJECT_VERSION = 0.1.0
+PROJECT_VERSION = 0.1.1
 
 DEPS = gproc gen_leader
 

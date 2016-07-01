@@ -2,7 +2,7 @@
 logs/*
 ct_run.ct*
 deps/*
-ebin/*
+ebin/*.beam
 all_runs.html
 index.html
 *.js
