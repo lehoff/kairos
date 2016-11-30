@@ -1,7 +1,7 @@
 PROJECT = chronos
 
 PROJECT_DESCRIPTION = chronos - a timer utility for Erlang
-PROJECT_VERSION = 0.1.3
+PROJECT_VERSION = 0.1.4
 
 DEPS = gproc
 
@@ -38,3 +38,5 @@ clean-ct:
 
 deep-clean: clean-beam clean-ct
 	rm -rf deps
+
+app:: rebar.config
