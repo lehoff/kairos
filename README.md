@@ -166,7 +166,22 @@ The downside is that there is not equivalent of
 `gen_fsm:start_timer/2` for `gen_server` so for that you have to use
 one of the other solutions.
 
+# Installing Chronos
 
+## Using erlang.mk
+
+Just add
+```
+dep_chronos = https://github.com/lehoff/chronos <version>
+```
+to your Makefile and it should be fine.
+
+
+## Using rebar
+If you are using rebar to build your project you should add the following to your dependencies:
+```
+    {chronos, "0.0.3", {git, "git://github.com/lehoff/chronos.git", {tag, <version>}}}
+```
 
 # FAQ
 
