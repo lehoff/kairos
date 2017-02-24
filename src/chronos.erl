@@ -27,6 +27,13 @@
          terminate/2,
          code_change/3]).
 
+-export_type([server_name/0,
+              timer_name/0,
+              timer_duration/0]).
+
+-record(chronos_state,
+        {running = []  :: [{timer_name(), reference()}]
+        }).
 
 %% Types
 -type server_name()   :: atom().
@@ -36,20 +43,15 @@
 -type args()          :: [term()].
 -type callback()      :: {module(), function_name(), args()}.
 -type timer_duration():: non_neg_integer().
+-type state()         :: #chronos_state{}.
 
--export_type([server_name/0,
-              timer_name/0,
-              timer_duration/0]).
 
--record(chronos_state,
-        {running = []  :: [{timer_name(), reference()}]
-        }).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
--spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error',term()}.
+-spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error', term()}.
 start_link(ServerName) ->
     gen_server:start_link({local, ServerName}, _Args = [], _Opts = []).
 
@@ -78,11 +80,11 @@ stop_timer(ServerName, TimerName) ->
 %%%===================================================================
 
 
--spec init([]) -> {'ok', #chronos_state{}} | {'stop', term()} | 'ignore'.
+-spec init([]) -> {'ok', state()} | {'stop', term()} | 'ignore'.
 init(_Args) ->
     {ok, #chronos_state{}}.
 
--spec handle_call(term(), term(), #chronos_state{}) ->
+-spec handle_call(term(), term(), state()) ->
                          {'reply', 'ok' | {'error', term()} , #chronos_state{}} |
                          {'stop', term(), 'ok', #chronos_state{}}.
 handle_call(stop, _From, State) ->
