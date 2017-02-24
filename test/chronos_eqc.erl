@@ -135,12 +135,11 @@ prop_chronos() ->
                end)).
 
 start_context() ->
-    application:start(gproc),
     timer_expiry:start_link().
 
 stop_context() ->
-    timer_expiry:stop(),
-    application:stop(gproc).
+    timer_expiry:stop().
+
 
 
 %%-------------------- ASSERTIONS ----------------------
