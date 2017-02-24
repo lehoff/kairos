@@ -7,6 +7,7 @@
 
 -module(chronos_eqc).
 
+-ifdef(EQC).
 
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_statem.hrl").
@@ -183,3 +184,5 @@ advance_time_args(_S) ->
 
 advance_time(Duration) ->
     timer:sleep(Duration).
+
+-endif.
