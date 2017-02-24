@@ -85,8 +85,8 @@ init(_Args) ->
     {ok, #chronos_state{}}.
 
 -spec handle_call(term(), term(), state()) ->
-                         {'reply', 'ok' | {'error', term()} , #chronos_state{}} |
-                         {'stop', term(), 'ok', #chronos_state{}}.
+    {'reply', 'ok' | {'error', term()} , state()}
+  | {'stop', term(), 'ok', state()}.
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call({start_timer, Name, Time, Callback}, _From,
