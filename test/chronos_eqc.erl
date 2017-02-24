@@ -7,6 +7,7 @@
 
 -module(chronos_eqc).
 
+-ifdef(EQC).
 
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_statem.hrl").
@@ -135,12 +136,11 @@ prop_chronos() ->
                end)).
 
 start_context() ->
-    application:start(gproc),
     timer_expiry:start_link().
 
 stop_context() ->
-    timer_expiry:stop(),
-    application:stop(gproc).
+    timer_expiry:stop().
+
 
 
 %%-------------------- ASSERTIONS ----------------------
@@ -184,3 +184,5 @@ advance_time_args(_S) ->
 
 advance_time(Duration) ->
     timer:sleep(Duration).
+
+-endif.

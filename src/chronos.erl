@@ -27,16 +27,6 @@
          terminate/2,
          code_change/3]).
 
-
-%% Types
--type server_name()   :: term().
-%%-type server_ref()    :: server_name() | pid().
--type timer_name()    :: term().
--type function_name() :: atom().
--type args()          :: [term()].
--type callback()      :: {module(), function_name(), args()}.
--type timer_duration():: non_neg_integer().
-
 -export_type([server_name/0,
               timer_name/0,
               timer_duration/0]).
@@ -45,13 +35,25 @@
         {running = []  :: [{timer_name(), reference()}]
         }).
 
+%% Types
+-type server_name()   :: atom().
+%%-type server_ref()    :: server_name() | pid().
+-type timer_name()    :: term().
+-type function_name() :: atom().
+-type args()          :: [term()].
+-type callback()      :: {module(), function_name(), args()}.
+-type timer_duration():: non_neg_integer().
+-type state()         :: #chronos_state{}.
+
+
+
 %%%===================================================================
 %%% API
 %%%===================================================================
 
--spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error',term()}.
+-spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error', term()}.
 start_link(ServerName) ->
-    gen_server:start_link(?MODULE, ServerName, []).
+    gen_server:start_link({local, ServerName}, _Args = [], _Opts = []).
 
 %% -start_link() -> {'ok',pid()} | 'ignore' | {'error',term()}.
 %% start_link() ->
@@ -78,14 +80,13 @@ stop_timer(ServerName, TimerName) ->
 %%%===================================================================
 
 
--spec init(server_name()) -> {'ok', #chronos_state{}} | {'stop', term()} | 'ignore'.
-init(ServerName) ->
-    gproc:reg(proc_name(ServerName)),
+-spec init([]) -> {'ok', state()} | {'stop', term()} | 'ignore'.
+init(_Args) ->
     {ok, #chronos_state{}}.
 
--spec handle_call(term(), term(), #chronos_state{}) ->
-                         {'reply', 'ok' | {'error', term()} , #chronos_state{}} |
-                         {'stop', term(), 'ok', #chronos_state{}}.
+-spec handle_call(term(), term(), state()) ->
+    {'reply', 'ok' | {'error', term()} , state()}
+  | {'stop', term(), 'ok', state()}.
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call({start_timer, Name, Time, Callback}, _From,
@@ -139,14 +140,5 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
-proc_name(ServerName) -> {n, l, ServerName}.
-
-
 call(ServerName, Msg) ->
-    {Pid, _} = gproc:await(proc_name(ServerName)),
-    gen_server:call(Pid, Msg, 5000).
-
-%% cast(ServerName, Msg) ->
-%%     {Pid, _} = gproc:await(proc_name(ServerName)),
-%%     gen_server:cast(Pid, Msg).
+    gen_server:call(ServerName, Msg, 5000).

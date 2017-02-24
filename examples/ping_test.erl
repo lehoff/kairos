@@ -3,7 +3,6 @@
 -compile(export_all).
 
 setup() ->
-    application:start(gproc),
     meck:new(chronos, [passthrough]),
     meck:expect(chronos, start_timer,
                 fun(_,_,_,_) ->

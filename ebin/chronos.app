@@ -3,5 +3,5 @@
 	{vsn, "0.1.4"},
 	{modules, ['chronos']},
 	{registered, []},
-	{applications, [kernel,stdlib,gproc]}
+	{applications, [kernel,stdlib]}
 ]}.
