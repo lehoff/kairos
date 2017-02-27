@@ -32,11 +32,11 @@ initial_state() ->
 command(S) ->
     frequency
       ([ {100, {call, timer_expiry, start_server, [server_name()]}} ]
-       ++ [ {1000, {call, timer_expiry, start_timer, start_timer_args(S)}}
+       ++ [ {1000, {call, timer_expiry, start_timer, args(start_timer, S)}}
             || S#state.servers /= [] ]
-       ++ [ {200, {call, timer_expiry, stop_timer, stop_timer_args(S)}}
+       ++ [ {200, {call, timer_expiry, stop_timer, args(stop_timer, S)}}
             || S#state.servers /= []  ]
-       ++ [ {1000, {call, ?MODULE, advance_time, advance_time_args(S)}}
+       ++ [ {1000, {call, ?MODULE, advance_time, args(advance_time, S)}}
             || S#state.servers /= [] andalso possible_to_advance_time(S) ]
       ).
 
@@ -169,15 +169,16 @@ timer_name() -> {timer, nat()}.
 timer_duration() -> choose(10, 100).
 
 
-start_timer_args(S) ->
+args(start_timer, S) ->
+
     ?LET(Server, oneof(S#state.servers),
-         [Server, timer_name(), timer_duration()]).
+         [Server, timer_name(), timer_duration()]);
 
-stop_timer_args(S) ->
+args(stop_timer, S) ->
     ?LET({Server, Timer}, oneof( S#state.running ++ [{hd(S#state.servers), bogus}]),
-         [Server,  Timer]).
+         [Server,  Timer]);
 
-advance_time_args(_S) ->
+args(advance_time, _S) ->
     [choose(5, 50)].
 
 %%---------------------- OPERATIONS ----------------------

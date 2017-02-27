@@ -53,7 +53,7 @@
 
 -spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error', term()}.
 start_link(ServerName) ->
-    gen_server:start_link({local, ServerName}, _Args = [], _Opts = []).
+    gen_server:start_link({local, ServerName}, ?MODULE, _Args = [], _Opts = []).
 
 %% -start_link() -> {'ok',pid()} | 'ignore' | {'error',term()}.
 %% start_link() ->
