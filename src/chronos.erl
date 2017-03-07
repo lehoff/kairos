@@ -31,7 +31,10 @@
 
 -export_type([server_name/0,
               timer_name/0,
-              timer_duration/0]).
+              timer_duration/0,
+              function_name/0,
+              args/0,
+              callback/0]).
 
 -record(chronos_state,
         {running = []  :: [{timer_name(), reference()}]
@@ -102,16 +105,16 @@ handle_call({start_timer, Name, Time, Callback}, _From,
              false ->
                  R;
              {value, {_, TRef}, Ra} ->
-                 _ = erlang:cancel_timer(TRef),
+                 _ = chronos_command:cancel_timer(TRef),
                  Ra
          end,
-    TRefNew = erlang:start_timer(Time, self(), {Name,Callback}),
+    TRefNew = chronos_command:start_timer(Time, Name, Callback),
     {reply, ok, State#chronos_state{running=[{Name,TRefNew}|R1]}};
 handle_call({stop_timer, Name}, _From,
             #chronos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
         {value, {_, TRef}, Rnext} ->
-            TimeLeft = erlang:cancel_timer(TRef),
+            TimeLeft = chronos_command:cancel_timer(TRef),
             {reply, {ok, TimeLeft}, State#chronos_state{running=Rnext}};
         false ->
             {reply, not_running, State}
@@ -120,13 +123,11 @@ handle_call({stop_timer, Name}, _From,
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=State) ->
+handle_info({timeout, TRef, {Timer, Callback}}, #chronos_state{running=R}=State) ->
     NewR =
         case lists:keytake(Timer, 1, R) of
             {value, {_,TRef}, R1} ->
-                spawn( fun() ->
-                               erlang:apply(M, F, Args)
-                       end ),
+                chronos_command:execute_callback(Callback),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
                 R1;
