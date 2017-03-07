@@ -28,7 +28,7 @@ api_spec() ->
            [ #api_module{
                 name = chronos_command,
                 functions = 
-                    [ #api_fun{ name = start_timer, arity=3 },
+                    [ #api_fun{ name = start_timer, arity=2 },
                       #api_fun{ name = cancel_timer, arity=1 },
                       #api_fun{ name = execute_callback, arity=1 } ]}
            ]}.
@@ -70,7 +70,7 @@ start_new_timer_pre(S, [Server, TimerName, Duration, _Ref]) ->
         Duration > 0.
 
 start_new_timer_callouts(_S, [_Server, TimerName, Duration, Ref]) ->
-    ?CALLOUT(chronos_command, start_timer, [Duration, TimerName, callback()], Ref).
+    ?CALLOUT(chronos_command, start_timer, [Duration, TimerName], Ref).
 
 start_new_timer_next(S, _, [Server, Timer, _Duration, Ref]) ->
     S#state{ started = [ {{Server,Timer}, Ref} | S#state.started],

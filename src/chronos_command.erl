@@ -1,15 +1,15 @@
 -module(chronos_command).
 
 
--export([start_timer/3,
+-export([start_timer/2,
          cancel_timer/1,
          execute_callback/1]).
 
 
--spec start_timer(non_neg_integer, chronos:timer_name(), chronos:callback()) -> 
+-spec start_timer(non_neg_integer, chronos:timer_name()) -> 
                          'ok' | {'error', term()}.
-start_timer(Duration, TimerName, Callback) ->
-    erlang:start_timer(Duration, self(), {TimerName, Callback}).
+start_timer(Duration, TimerName) ->
+    erlang:start_timer(Duration, self(), TimerName).
 
 -spec cancel_timer(reference()) -> non_neg_integer() | 'false'.
 cancel_timer(TRef) ->

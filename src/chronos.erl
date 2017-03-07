@@ -37,7 +37,7 @@
               callback/0]).
 
 -record(chronos_state,
-        {running = []  :: [{timer_name(), reference()}]
+        {running = []  :: [{timer_name(), reference(), callback()}]
         }).
 
 %% Types
@@ -101,16 +101,17 @@ handle_call({start_timer, Name, Time, Callback}, _From,
     R1 = case lists:keytake(Name, 1, R) of
              false ->
                  R;
-             {value, {_, TRef}, Ra} ->
+             {value, {Name, TRef, _Callback}, Ra} ->
                  _ = chronos_command:cancel_timer(TRef),
                  Ra
          end,
-    TRefNew = chronos_command:start_timer(Time, Name, Callback),
-    {reply, ok, State#chronos_state{running=[{Name,TRefNew}|R1]}};
+    TRefNew = chronos_command:start_timer(Time, Name),
+    {reply, ok, 
+     State#chronos_state{running=[{Name, TRefNew, Callback} | R1]}};
 handle_call({stop_timer, Name}, _From,
             #chronos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
-        {value, {_, TRef}, Rnext} ->
+        {value, {_, TRef, _Callback}, Rnext} ->
             TimeLeft = chronos_command:cancel_timer(TRef),
             {reply, {ok, TimeLeft}, State#chronos_state{running=Rnext}};
         false ->
@@ -120,10 +121,10 @@ handle_call({stop_timer, Name}, _From,
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({timeout, TRef, {Timer, Callback}}, #chronos_state{running=R}=State) ->
+handle_info({timeout, TRef, Timer}, #chronos_state{running=R}=State) ->
     NewR =
         case lists:keytake(Timer, 1, R) of
-            {value, {_,TRef}, R1} ->
+            {value, {_,TRef, Callback}, R1} ->
                 chronos_command:execute_callback(Callback),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
