@@ -41,7 +41,7 @@
         }).
 
 %% Types
--type server_name()   :: atom().
+-type server_name()   :: atom() | pid().
 %%-type server_ref()    :: server_name() | pid().
 -type timer_name()    :: term().
 -type function_name() :: atom().
@@ -64,9 +64,6 @@ start_link() ->
 start_link(ServerName) ->
     gen_server:start_link({local, ServerName}, ?MODULE, _Args = [], _Options = []).
 
-%% -start_link() -> {'ok',pid()} | 'ignore' | {'error',term()}.
-%% start_link() ->
-%%     gen_server:start_link(?MODULE, [], []).
 
 -spec stop(server_name()) -> ok.
 stop(ServerName) ->

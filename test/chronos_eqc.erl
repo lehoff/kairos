@@ -81,17 +81,18 @@ stop_running_timer(Server, Timer) ->
     chronos:stop_timer(Server, Timer).
 
 stop_running_timer_args(S) ->
-    oneof( S#state.running ).
+    ?LET({Server, Timer}, oneof( S#state.running ),
+         [Server, Timer]).
 
 stop_running_timer_pre(S) ->
     S#state.running /= [].
 
-%% stop_running_timer_post(_S, _Args, ok) ->
-%%     true;
-%% stop_running_timer_post(_S, _Args, not_running) ->
-%%     false.
+stop_running_timer_post(_S, _Args, {ok,_}) ->
+    true;
+stop_running_timer_post(_S, _Args, not_running) ->
+    false.
 
-stop_running_callouts(S, [Server, Timer]) ->
+stop_running_timer_callouts(S, [Server, Timer]) ->
     Key = {Server, Timer},
     Ref = proplists:get_value(Key, S#state.started),
     ?CALLOUT(chronos_command, cancel_timer, [Ref], 10).
@@ -125,6 +126,53 @@ teardown() ->
 
 stop(S) ->
     [ chronos:stop(Server) || Server <- S#state.servers ].
+
+
+
+prop_executes() ->
+    ?FORALL(Duration, timer_duration(),
+            begin
+                chronos:start_link(chronos_test),
+                ExpiryDuration = check(Duration),
+                ExpiryDuration >= (Duration*1.0)
+            end).
+
+check(Duration) ->
+    Self = self(), 
+    Ref = make_ref(),
+    Pid = spawn( fun () -> checker(Self, Ref) end),
+    chronos:start_timer(chronos_test, some_name, Duration, {?MODULE, timer_expiry, [Pid]}),
+    Pid ! start,
+    receive
+        {duration, Ref, ActualDuration} ->
+            io:format("~p : ~p~n ", [ActualDuration, Duration]),
+            ActualDuration
+    after Duration * 3 ->
+            error
+    end.
+
+timer_expiry(Pid) ->
+    Pid ! expiry.
+
+checker(From, Ref) ->
+    receive
+        start ->
+            Start = erlang:timestamp(),
+            checker2(From, Ref, Start)
+    end.
+
+checker2(From, Ref, Start) ->
+    receive
+        expiry ->
+            End = erlang:timestamp(),
+            Delta = ms_delta(Start, End),
+            From ! {duration, Ref, Delta}
+    end.
+        
+
+ms_delta({Mega1, Sec1, Micro1}, {Mega2, Sec2, Micro2}) ->
+    {Mega, Sec, Micro} = {Mega2 - Mega1, Sec2 - Sec1, Micro2 - Micro1},
+    (1000000*Mega + Sec) * 1000 + Micro / 1000.
 
 %%-------------------- GENERATORS ------------------------------
 
