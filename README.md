@@ -1,50 +1,50 @@
-# Chronos - a timer utility for Erlang.
+# chronos - a timer utility for Erlang.
 
 Erlang comes with some good utilities for timers, but there are some
 shortcomings that might become an issue for you as they did for me.
 
-Chronos tries to hide the book keeping from the user in a way that
+chronos tries to hide the book keeping from the user in a way that
 will be very familiar to those who have tried to implement protocols
 from the telecommunications realm.
 
-In addition to the abstraction the Chronos distribution also shows how
+In addition to the abstraction the chronos distribution also shows how
 to design the APIs of your code in such a way that it makes it easier
 to test the code. This part requires the use of the meck application
 by Adam Lindberg or some serious manual hacking... I am going to show
 the meck way of doing it. See the `ping_test` module in the `examples`
 directory.
 
-Abstracting time as it is suggested (with or with Chronos) will give
+Abstracting time as it is suggested (with or with chronos) will give
 you a design where you can test how timers work very fast. You can
-trust things will work in real life since Chronos comes with a test
+trust things will work in real life since chronos comes with a test
 suite that shows that it does what you would expect. The burden on you
 is then to write a test that shows that your component works as it
 should for a sequence of events where some of them happens to be
 timers expiring. And you do not have to wait for the timers to expire
 since time has been abstracted.
 
-Below the description of how to use Chronos there is a brief
+Below the description of how to use chronos there is a brief
 overview of what the existing timer solutions has to offer so you can
 make an informed choice about which timer solution fits your problem
 the best.
 
 
-# The Chronos approach to timers
+# The chronos approach to timers
 
-The design of Chronos was influenced by the problems with the existing
+The design of chronos was influenced by the problems with the existing
 timer solutions and shaped by the needs when implementing telecom
 protocols, which uses timers extensively.
 
 ## Timer servers
 
-Instead of having a single global timer server Chronos allows you to
+Instead of having a single global timer server chronos allows you to
 create as many or as few timer serves as you see fit.
 
     start_link(ServerName)
 
 will start a new timer server where
 
-    ServerName :: term().
+    ServerName :: atom().
 
 ## Timers
 
@@ -54,7 +54,7 @@ Once you have started a timer server you can start timers using
 
 where
 
-    ServerName :: term()
+    ServerName :: atom() | pid().
     TimerName :: term()
     Timeout :: pos_integer()
     Callback :: {module(), atom(), [term[]]}
@@ -69,14 +69,14 @@ In some cases you want to cancel a timer and for that you can use
 
 In this case the `Callback` function will not be called.
 
-Chronos keeps track of all the running timers so your application code
+chronos keeps track of all the running timers so your application code
 can concentrate on what it is supposed to do without having to do
 tedious book keeping.
 
-## Testing with Chronos
+## Testing with chronos using meck
 
 Getting rid of tedious book keeping is not the only thing you get from
-using Chronos. By putting all your timers in the hands of Chronos you
+using chronos. By putting all your timers in the hands of chronos you
 get a set-up that is very easy to mock so that you can abstract time
 out of your tests.
 
@@ -101,7 +101,7 @@ and then handling the timeout becomes very simple:
         ...
 
 That is the basic set-up and while testing you have to mock
-Chronos. This is easy to do with the meck application and should be
+chronos. This is easy to do with the meck application and should be
 quite simple to do with any mocking library.
 
 So you ensure that you have control over chronos:
@@ -121,6 +121,39 @@ effects of the timer expiry you simply call
 
 This approach lends itself well to property based testing and unit
 testing.
+
+## Testing with chronos using EQC mocking
+
+The approach is the same as with meck, the only things you need to change is the
+mocking of chronos.
+
+The most common way of using mocking with EQC is through the `eqc_component`, where
+you have to specify an `api_spec/1` function:
+
+    api_spec() ->
+        #api_spec{
+            language = erlang,
+            modules = [
+                #api_module{
+                    name = chronos,
+                    functions = [
+                        #api_fun{
+                            name = start_link, arity = 1},
+                        #api_fun{
+                            name = start_link, arity = 0},
+                        #api_fun{
+                            name = start_timer, arity = 4},
+                        #api_fun{
+                            name = stop_timer, arity = 2} ]}]}.
+
+You can then specify the callouts to these in the `_callouts/2` function for a
+command:
+
+    my_command_callouts(S, Args) ->
+        ?CALLOUT(chronos, start_timer, [ServerName, TimerName, Duration, MFA], ok).
+        
+This will give you a very precise description of all aspects of the protocol that
+your component is following. Yes, timers are part of the protocol.
 
 # Existing timer solutions
 
@@ -145,7 +178,7 @@ your code uncessarily.
 
 I am assuming that you use Erlang/OTP to develop your software - if
 not you can skip this section! And in that case you probably never got
-to this line since the Chronos abstraction is too high level for your
+to this line since the chronos abstraction is too high level for your
 taste...
 
 For `gen_server` and `gen_fsm` you can specify a timer in the result
@@ -166,7 +199,35 @@ The downside is that there is not equivalent of
 `gen_fsm:start_timer/2` for `gen_server` so for that you have to use
 one of the other solutions.
 
-# Installing Chronos
+# Linking approach
+
+The chronos timer server is designed to be used as a process that is owned by one process.
+There are a number of reasons for this:
+
+* When a timer server dies you want to be notified and take appropriate action.
+* When the starting process dies you want the timer server to go away.
+
+The former can be dealt with by simple supervision, but the fixing the latter would
+require much more complexity in the chronos code.
+
+If an arbitrary number of process link to the timer server you need to protect the
+timer server against the possible death of any of them. 
+This can be done by adding a layer on top of chronos that deals with this. Hence, in
+order to keep chronos simple this has deliberately been left out. Also, so far no one
+has come up with a use case where sharing the timer server is required. This leads me
+to believe that such cases will have special traits leading to the need for custom
+code in each case.
+
+# Roadmap
+
+Based on the use cases chronos has been used for so far it seems that it is a useful
+little utility, that does not need a huge additional feature set.
+
+So by the end of Q2-2017 the 1.0 version will be released unless unforeseen features
+emerges from concrete use cases.
+
+
+# Installing chronos
 
 ## Using erlang.mk
 
@@ -187,6 +248,6 @@ If you are using rebar to build your project you should add the following to you
 
 ## Q: How can you be sure that the timers will do the right thing?
 
-A: Chronos comes with a property based testing suite that validates
+A: chronos comes with a property based testing suite that validates
    that the timers can be started, stopped and restarted as expected
    and that they expire as expected.

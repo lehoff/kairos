@@ -12,8 +12,10 @@
 
 %% API
 -export([start_link/1,
-         stop/1,
-         start_timer/4,
+         start_link/0,
+         stop/1]).
+
+-export([start_timer/4,
          stop_timer/2
         ]).
 
@@ -29,14 +31,17 @@
 
 -export_type([server_name/0,
               timer_name/0,
-              timer_duration/0]).
+              timer_duration/0,
+              function_name/0,
+              args/0,
+              callback/0]).
 
 -record(chronos_state,
-        {running = []  :: [{timer_name(), reference()}]
+        {running = []  :: [{timer_name(), reference(), callback()}]
         }).
 
 %% Types
--type server_name()   :: atom().
+-type server_name()   :: atom() | pid().
 %%-type server_ref()    :: server_name() | pid().
 -type timer_name()    :: term().
 -type function_name() :: atom().
@@ -51,13 +56,14 @@
 %%% API
 %%%===================================================================
 
+-spec start_link() -> {'ok', pid()} | 'ignore' | {'error', term()}.
+start_link() ->
+    gen_server:start_link(?MODULE, _Args = [], _Options = []).
+
 -spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error', term()}.
 start_link(ServerName) ->
-    gen_server:start_link({local, ServerName}, _Args = [], _Opts = []).
+    gen_server:start_link({local, ServerName}, ?MODULE, _Args = [], _Options = []).
 
-%% -start_link() -> {'ok',pid()} | 'ignore' | {'error',term()}.
-%% start_link() ->
-%%     gen_server:start_link(?MODULE, [], []).
 
 -spec stop(server_name()) -> ok.
 stop(ServerName) ->
@@ -95,17 +101,18 @@ handle_call({start_timer, Name, Time, Callback}, _From,
     R1 = case lists:keytake(Name, 1, R) of
              false ->
                  R;
-             {value, {_, TRef}, Ra} ->
-                 _ = erlang:cancel_timer(TRef),
+             {value, {Name, TRef, _Callback}, Ra} ->
+                 _ = chronos_command:cancel_timer(TRef),
                  Ra
          end,
-    TRefNew = erlang:start_timer(Time, self(), {Name,Callback}),
-    {reply, ok, State#chronos_state{running=[{Name,TRefNew}|R1]}};
+    TRefNew = chronos_command:start_timer(Time, Name),
+    {reply, ok, 
+     State#chronos_state{running=[{Name, TRefNew, Callback} | R1]}};
 handle_call({stop_timer, Name}, _From,
             #chronos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
-        {value, {_, TRef}, Rnext} ->
-            TimeLeft = erlang:cancel_timer(TRef),
+        {value, {_, TRef, _Callback}, Rnext} ->
+            TimeLeft = chronos_command:cancel_timer(TRef),
             {reply, {ok, TimeLeft}, State#chronos_state{running=Rnext}};
         false ->
             {reply, not_running, State}
@@ -114,13 +121,11 @@ handle_call({stop_timer, Name}, _From,
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=State) ->
+handle_info({timeout, TRef, Timer}, #chronos_state{running=R}=State) ->
     NewR =
         case lists:keytake(Timer, 1, R) of
-            {value, {_,TRef}, R1} ->
-                spawn( fun() ->
-                               erlang:apply(M, F, Args)
-                       end ),
+            {value, {_,TRef, Callback}, R1} ->
+                chronos_command:execute_callback(Callback),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
                 R1;
@@ -129,9 +134,9 @@ handle_info({timeout, TRef, {Timer, {M, F, Args}}}, #chronos_state{running=R}=St
             end,
     {noreply, State#chronos_state{running=NewR}}.
 
-terminate(_Reason, #chronos_state{running=R}) ->
-    _ = [ erlang:cancel_timer(TRef)
-      || {_, TRef} <- R ],
+terminate(_Reason, #chronos_state{}) ->
+    % no need to cancel the timers individually as all timers with a pid() as
+    % destination will be removed when the process goes away.
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -142,3 +147,4 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 call(ServerName, Msg) ->
     gen_server:call(ServerName, Msg, 5000).
+ 
