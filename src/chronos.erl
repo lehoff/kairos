@@ -12,8 +12,10 @@
 
 %% API
 -export([start_link/1,
-         stop/1,
-         start_timer/4,
+         start_link/0,
+         stop/1]).
+
+-export([start_timer/4,
          stop_timer/2
         ]).
 
@@ -51,9 +53,13 @@
 %%% API
 %%%===================================================================
 
+-spec start_link() -> {'ok', pid()} | 'ignore' | {'error', term()}.
+start_link() ->
+    gen_server:start_link(?MODULE, _Args = [], _Options = []).
+
 -spec start_link(server_name()) -> {'ok', pid()} | 'ignore' | {'error', term()}.
 start_link(ServerName) ->
-    gen_server:start_link({local, ServerName}, _Args = [], _Opts = []).
+    gen_server:start_link({local, ServerName}, ?MODULE, _Args = [], _Options = []).
 
 %% -start_link() -> {'ok',pid()} | 'ignore' | {'error',term()}.
 %% start_link() ->
@@ -142,3 +148,4 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 call(ServerName, Msg) ->
     gen_server:call(ServerName, Msg, 5000).
+ 
