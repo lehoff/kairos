@@ -101,10 +101,22 @@ stop_running_timer_next(S, _Res, [Server, Timer]) ->
     S#state{ running = lists:delete({Server, Timer}, S#state.running) }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%stop_bogus_timer(Server) ->
+stop_bogus_timer(Server) ->
+    chronos:stop_timer(Server, bogus).
+
+stop_bogus_timer_args(S) ->
+    [oneof(S#state.servers)].
+
+stop_bogus_timer_pre(S) ->
+    S#state.servers /= [].
+
+stop_bogus_timer_post(_S, _Args, not_running) ->
+    true;
+stop_bogus_timer_post(_S, _Args, {ok, _}) ->
+    false.
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 prop_chronos() ->
     ?SETUP( fun setup/0,
             ?FORALL(Cmds,commands(?MODULE),
