@@ -1,8 +1,3 @@
-{build, "make test_chronos"}.
-{test_path, "ebin"}.
+{build, "rebar3 compile"}.
+{test_path, "_build/test/lib/chronos/ebin"}.
 {test_path, "test"}.
-{deps, "deps/edown/ebin"}.
-{deps, "deps/gen_leader/ebin"}.
-{deps, "deps/gproc/ebin"}.
-{deps, "deps/hamcrest/ebin"}.
-{deps, "deps/meck/ebin"}.
