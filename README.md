@@ -110,7 +110,7 @@ So you ensure that you have control over chronos:
     meck:expect(chronos, start_timer,
                 fun(_,_) -> 42 end)
 
-As part of the test you check that the timer was requsted to start:
+As part of the test you check that the timer was requested to start:
 
     meck:called(chronos, start_timer, [my_server, timer_4])
 
