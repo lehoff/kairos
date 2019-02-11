@@ -172,7 +172,7 @@ the timer module.
 As the Efficiency Guide states the `erlang:send_after/3` and
 `erlang:start_timer/3` are much more efficient than the timer module,
 but using them directly requires some book keeping which can clutter
-your code uncessarily.
+your code unnecessarily.
 
 ## Using the OTP timers
 
