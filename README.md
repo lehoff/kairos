@@ -110,7 +110,7 @@ So you ensure that you have control over chronos:
     meck:expect(chronos, start_timer,
                 fun(_,_) -> 42 end)
 
-As part of the test you check that the timer was requsted to start:
+As part of the test you check that the timer was requested to start:
 
     meck:called(chronos, start_timer, [my_server, timer_4])
 
@@ -172,7 +172,7 @@ the timer module.
 As the Efficiency Guide states the `erlang:send_after/3` and
 `erlang:start_timer/3` are much more efficient than the timer module,
 but using them directly requires some book keeping which can clutter
-your code uncessarily.
+your code unnecessarily.
 
 ## Using the OTP timers
 
