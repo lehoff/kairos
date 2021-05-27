@@ -151,7 +151,7 @@ command:
 
     my_command_callouts(S, Args) ->
         ?CALLOUT(chronos, start_timer, [ServerName, TimerName, Duration, MFA], ok).
-        
+
 This will give you a very precise description of all aspects of the protocol that
 your component is following. Yes, timers are part of the protocol.
 
@@ -211,7 +211,7 @@ The former can be dealt with by simple supervision, but the fixing the latter wo
 require much more complexity in the chronos code.
 
 If an arbitrary number of process link to the timer server you need to protect the
-timer server against the possible death of any of them. 
+timer server against the possible death of any of them.
 This can be done by adding a layer on top of chronos that deals with this. Hence, in
 order to keep chronos simple this has deliberately been left out. Also, so far no one
 has come up with a use case where sharing the timer server is required. This leads me
@@ -223,8 +223,7 @@ code in each case.
 Based on the use cases chronos has been used for so far it seems that it is a useful
 little utility, that does not need a huge additional feature set.
 
-So by the end of Q2-2017 the 1.0 version will be released unless unforeseen features
-emerges from concrete use cases.
+chronos has been used several places by now (mid-2021) so v1.0 it is.
 
 
 # Installing chronos
@@ -241,7 +240,7 @@ to your Makefile and it should be fine.
 ## Using rebar
 If you are using rebar to build your project you should add the following to your dependencies:
 ```
-    {chronos, "0.0.3", {git, "git://github.com/lehoff/chronos.git", {tag, <version>}}}
+    {chronos, {git, "git://github.com/lehoff/chronos.git", {tag, <version>}}}
 ```
 
 # FAQ
