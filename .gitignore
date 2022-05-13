@@ -8,3 +8,4 @@ index.html
 *.js
 variables-ct*
 ct_default.css
+_build/
