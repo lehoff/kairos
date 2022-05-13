@@ -1,0 +1,26 @@
+on: push
+
+env:
+  REBAR_VERSION: 3.18.0
+  OTP_VERSION: 24.2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Integration
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{env.OTP_VERSION}}
+          rebar3-version: ${{env.REBAR_VERSION}}
+
+      - name: "Run eunit"
+        run: rebar3 eunit
+
+      - name: "Run dialyzer"
+        run: rebar3 dialyzer
+
+      - name: "Run dialyzer"
+        run: rebar3 dialyzer
