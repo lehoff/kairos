@@ -16,11 +16,14 @@ jobs:
           otp-version: ${{env.OTP_VERSION}}
           rebar3-version: ${{env.REBAR_VERSION}}
 
-      - name: "Run eunit"
-        run: rebar3 eunit
+      - name: "Run format"
+        run: rebar3 fmt --check
 
-      - name: "Run dialyzer"
-        run: rebar3 dialyzer
+      # - name: "Run eunit"
+      #   run: rebar3 eunit
+
+      # - name: "Run common tests"
+      #   run: rebar3 ct
 
       - name: "Run dialyzer"
         run: rebar3 dialyzer
