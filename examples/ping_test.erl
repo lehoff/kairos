@@ -3,8 +3,8 @@
 -compile(export_all).
 
 setup() ->
-    meck:new(chronos, [passthrough]),
-    meck:expect(chronos, start_timer,
+    meck:new(kairos, [passthrough]),
+    meck:expect(kairos, start_timer,
                 fun(_,_,_,_) ->
                         0
                 end).
@@ -12,17 +12,17 @@ setup() ->
 
 start_test() ->
     {ok, _Pid} = ping:start_link(),
-    true = meck:called(chronos, start_link, '_').
+    true = meck:called(kairos, start_link, '_').
 
 ping_timer_started_test() ->
-    true = meck:called(chronos, start_timer,%% '_').
+    true = meck:called(kairos, start_timer,%% '_').
                        ['_', '_',
                         1000,
                         {ping, timer_expiry, [ping_timer]}]).
 
 expire_ping_timer_test() ->
     ping:timer_expiry(ping_timer),
-    true = meck:called(chronos, start_timer, ['_', '_',
+    true = meck:called(kairos, start_timer, ['_', '_',
                                               30000,
                                               {ping, timer_expiry, [silence_timer]}]).
 

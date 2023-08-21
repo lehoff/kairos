@@ -1,43 +1,46 @@
-# chronos - a timer utility for Erlang.
+# kairos - a timer utility for Erlang.
+
+The library formerly known as chronos - renamed to allow upload to 
+`hex.pm`.
 
 Erlang comes with some good utilities for timers, but there are some
 shortcomings that might become an issue for you as they did for me.
 
-chronos tries to hide the book keeping from the user in a way that
+kairos tries to hide the book keeping from the user in a way that
 will be very familiar to those who have tried to implement protocols
 from the telecommunications realm.
 
-In addition to the abstraction the chronos distribution also shows how
+In addition to the abstraction the kairos distribution also shows how
 to design the APIs of your code in such a way that it makes it easier
 to test the code. This part requires the use of the meck application
 by Adam Lindberg or some serious manual hacking... I am going to show
 the meck way of doing it. See the `ping_test` module in the `examples`
 directory.
 
-Abstracting time as it is suggested (with or with chronos) will give
+Abstracting time as it is suggested (with or with kairos) will give
 you a design where you can test how timers work very fast. You can
-trust things will work in real life since chronos comes with a test
+trust things will work in real life since kairos comes with a test
 suite that shows that it does what you would expect. The burden on you
 is then to write a test that shows that your component works as it
 should for a sequence of events where some of them happens to be
 timers expiring. And you do not have to wait for the timers to expire
 since time has been abstracted.
 
-Below the description of how to use chronos there is a brief
+Below the description of how to use kairos there is a brief
 overview of what the existing timer solutions has to offer so you can
 make an informed choice about which timer solution fits your problem
 the best.
 
 
-# The chronos approach to timers
+# The kairos approach to timers
 
-The design of chronos was influenced by the problems with the existing
+The design of kairos was influenced by the problems with the existing
 timer solutions and shaped by the needs when implementing telecom
 protocols, which uses timers extensively.
 
 ## Timer servers
 
-Instead of having a single global timer server chronos allows you to
+Instead of having a single global timer server kairos allows you to
 create as many or as few timer serves as you see fit.
 
     start_link(ServerName)
@@ -69,14 +72,14 @@ In some cases you want to cancel a timer and for that you can use
 
 In this case the `Callback` function will not be called.
 
-chronos keeps track of all the running timers so your application code
+kairos keeps track of all the running timers so your application code
 can concentrate on what it is supposed to do without having to do
 tedious book keeping.
 
-## Testing with chronos using meck
+## Testing with kairos using meck
 
 Getting rid of tedious book keeping is not the only thing you get from
-using chronos. By putting all your timers in the hands of chronos you
+using kairos. By putting all your timers in the hands of kairos you
 get a set-up that is very easy to mock so that you can abstract time
 out of your tests.
 
@@ -91,7 +94,7 @@ well.
 
 In the code you can request a timer like this:
 
-    chronos:start_timer(ServerName,
+    kairos:start_timer(ServerName,
                         timer_4,
                         {my_mod, timer_expiry, [timer_4]})
 
@@ -101,18 +104,18 @@ and then handling the timeout becomes very simple:
         ...
 
 That is the basic set-up and while testing you have to mock
-chronos. This is easy to do with the meck application and should be
+kairos. This is easy to do with the meck application and should be
 quite simple to do with any mocking library.
 
-So you ensure that you have control over chronos:
+So you ensure that you have control over kairos:
 
-    meck:new(chronos),
-    meck:expect(chronos, start_timer,
+    meck:new(kairos),
+    meck:expect(kairos, start_timer,
                 fun(_,_) -> 42 end)
 
 As part of the test you check that the timer was requested to start:
 
-    meck:called(chronos, start_timer, [my_server, timer_4])
+    meck:called(kairos, start_timer, [my_server, timer_4])
 
 And when you come to the point in the test where you want to see the
 effects of the timer expiry you simply call
@@ -122,10 +125,10 @@ effects of the timer expiry you simply call
 This approach lends itself well to property based testing and unit
 testing.
 
-## Testing with chronos using EQC mocking
+## Testing with kairos using EQC mocking
 
 The approach is the same as with meck, the only things you need to change is the
-mocking of chronos.
+mocking of kairos.
 
 The most common way of using mocking with EQC is through the `eqc_component`, where
 you have to specify an `api_spec/1` function:
@@ -135,7 +138,7 @@ you have to specify an `api_spec/1` function:
             language = erlang,
             modules = [
                 #api_module{
-                    name = chronos,
+                    name = kairos,
                     functions = [
                         #api_fun{
                             name = start_link, arity = 1},
@@ -150,7 +153,7 @@ You can then specify the callouts to these in the `_callouts/2` function for a
 command:
 
     my_command_callouts(S, Args) ->
-        ?CALLOUT(chronos, start_timer, [ServerName, TimerName, Duration, MFA], ok).
+        ?CALLOUT(kairos, start_timer, [ServerName, TimerName, Duration, MFA], ok).
 
 This will give you a very precise description of all aspects of the protocol that
 your component is following. Yes, timers are part of the protocol.
@@ -178,7 +181,7 @@ your code unnecessarily.
 
 I am assuming that you use Erlang/OTP to develop your software - if
 not you can skip this section! And in that case you probably never got
-to this line since the chronos abstraction is too high level for your
+to this line since the kairos abstraction is too high level for your
 taste...
 
 For `gen_server` and `gen_fsm` you can specify a timer in the result
@@ -201,38 +204,38 @@ one of the other solutions.
 
 # Linking approach
 
-The chronos timer server is designed to be used as a process that is owned by one process.
+The kairos timer server is designed to be used as a process that is owned by one process.
 There are a number of reasons for this:
 
 * When a timer server dies you want to be notified and take appropriate action.
 * When the starting process dies you want the timer server to go away.
 
 The former can be dealt with by simple supervision, but the fixing the latter would
-require much more complexity in the chronos code.
+require much more complexity in the kairos code.
 
 If an arbitrary number of process link to the timer server you need to protect the
 timer server against the possible death of any of them.
-This can be done by adding a layer on top of chronos that deals with this. Hence, in
-order to keep chronos simple this has deliberately been left out. Also, so far no one
+This can be done by adding a layer on top of kairos that deals with this. Hence, in
+order to keep kairos simple this has deliberately been left out. Also, so far no one
 has come up with a use case where sharing the timer server is required. This leads me
 to believe that such cases will have special traits leading to the need for custom
 code in each case.
 
 # Roadmap
 
-Based on the use cases chronos has been used for so far it seems that it is a useful
+Based on the use cases kairos has been used for so far it seems that it is a useful
 little utility, that does not need a huge additional feature set.
 
-chronos has been used several places by now (mid-2021) so v1.0 it is.
+kairos has been used several places by now (mid-2021) so v1.0 it is.
 
 
-# Installing chronos
+# Installing kairos
 
 ## Using erlang.mk
 
 Just add
 ```
-dep_chronos = https://github.com/lehoff/chronos <version>
+dep_kairos = https://github.com/lehoff/kairos <version>
 ```
 to your Makefile and it should be fine.
 
@@ -240,13 +243,17 @@ to your Makefile and it should be fine.
 ## Using rebar
 If you are using rebar to build your project you should add the following to your dependencies:
 ```
-    {chronos, {git, "git://github.com/lehoff/chronos.git", {tag, <version>}}}
+    {kairos, {git, "git://github.com/lehoff/kairos.git", {tag, <version>}}}
 ```
 
 # FAQ
 
 ## Q: How can you be sure that the timers will do the right thing?
 
-A: chronos comes with a property based testing suite that validates
+A: kairos comes with a property based testing suite that validates
    that the timers can be started, stopped and restarted as expected
    and that they expire as expected.
+
+## Q: Why kairos instead of chronos?
+
+A: chronos was already taken on `hex.pm` and given that Kairos in ancient Greek means "the right, critical, or opportune moment" is seemed like a good replacement. 

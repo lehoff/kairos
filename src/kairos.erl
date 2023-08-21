@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 27 Jun 2011 by Torben Hoffmann <torben.lehoff@gmail.com>
 %%%-------------------------------------------------------------------
--module(chronos).
+-module(kairos).
 
 -behaviour(gen_server).
 
@@ -36,7 +36,7 @@
               args/0,
               callback/0]).
 
--record(chronos_state,
+-record(kairos_state,
         {running = []  :: [{timer_name(), reference(), callback()}]
         }).
 
@@ -48,7 +48,7 @@
 -type args()          :: [term()].
 -type callback()      :: {module(), function_name(), args()}.
 -type timer_duration():: non_neg_integer().
--type state()         :: #chronos_state{}.
+-type state()         :: #kairos_state{}.
 
 
 
@@ -88,7 +88,7 @@ stop_timer(ServerName, TimerName) ->
 
 -spec init([]) -> {'ok', state()} | {'stop', term()} | 'ignore'.
 init(_Args) ->
-    {ok, #chronos_state{}}.
+    {ok, #kairos_state{}}.
 
 -spec handle_call(term(), term(), state()) ->
     {'reply', 'ok' | {'error', term()} , state()}
@@ -96,24 +96,24 @@ init(_Args) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call({start_timer, Name, Time, Callback}, _From,
-            #chronos_state{running=R}=State) ->
+            #kairos_state{running=R}=State) ->
     %% If the Name timer is running we clean it up.
     R1 = case lists:keytake(Name, 1, R) of
              false ->
                  R;
              {value, {Name, TRef, _Callback}, Ra} ->
-                 _ = chronos_command:cancel_timer(TRef),
+                 _ = kairos_command:cancel_timer(TRef),
                  Ra
          end,
-    TRefNew = chronos_command:start_timer(Time, Name),
+    TRefNew = kairos_command:start_timer(Time, Name),
     {reply, ok, 
-     State#chronos_state{running=[{Name, TRefNew, Callback} | R1]}};
+     State#kairos_state{running=[{Name, TRefNew, Callback} | R1]}};
 handle_call({stop_timer, Name}, _From,
-            #chronos_state{running=R}=State) ->
+            #kairos_state{running=R}=State) ->
     case lists:keytake(Name, 1, R) of
         {value, {_, TRef, _Callback}, Rnext} ->
-            TimeLeft = chronos_command:cancel_timer(TRef),
-            {reply, {ok, TimeLeft}, State#chronos_state{running=Rnext}};
+            TimeLeft = kairos_command:cancel_timer(TRef),
+            {reply, {ok, TimeLeft}, State#kairos_state{running=Rnext}};
         false ->
             {reply, not_running, State}
     end.
@@ -121,20 +121,20 @@ handle_call({stop_timer, Name}, _From,
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({timeout, TRef, Timer}, #chronos_state{running=R}=State) ->
+handle_info({timeout, TRef, Timer}, #kairos_state{running=R}=State) ->
     NewR =
         case lists:keytake(Timer, 1, R) of
             {value, {_,TRef, Callback}, R1} ->
-                chronos_command:execute_callback(Callback),
+                kairos_command:execute_callback(Callback),
                 R1;
             {value, _, R1} -> %% has to ignore since TRef is not the current one
                 R1;
             false ->
                 R
             end,
-    {noreply, State#chronos_state{running=NewR}}.
+    {noreply, State#kairos_state{running=NewR}}.
 
-terminate(_Reason, #chronos_state{}) ->
+terminate(_Reason, #kairos_state{}) ->
     % no need to cancel the timers individually as all timers with a pid() as
     % destination will be removed when the process goes away.
     ok.
