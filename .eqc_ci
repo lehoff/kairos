@@ -1,4 +1,4 @@
-{build, "rebar3 compile; erlc -o test test/chronos_eqc.erl"}.
-{test_path, "_build/default/lib/chronos/ebin"}.
+{build, "rebar3 compile; erlc -o test test/kairos_eqc.erl"}.
+{test_path, "_build/default/lib/kairos/ebin"}.
 {test_path, "test"}.
 {test_root, "."}.

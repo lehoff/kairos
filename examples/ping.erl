@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @author Torben Hoffmann <torben.lehoff@gmail.com>
 %%% @copyright (C) 2012, Torben Hoffmann
-%%% @doc Shows how to use chronos for timers.
+%%% @doc Shows how to use kairos for timers.
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
@@ -44,19 +44,19 @@ ping() ->
 
 init([]) ->
     TServer = ping_timer_server,
-    {ok, _Pid} = chronos:start_link(TServer),
-    _TS = chronos:start_timer(TServer, ping_timer, 1000,
+    {ok, _Pid} = kairos:start_link(TServer),
+    _TS = kairos:start_timer(TServer, ping_timer, 1000,
                               {?MODULE, timer_expiry, [ping_timer]}),
     {ok, #state{ tserver = TServer}}.
 
 handle_call(ping, _From, State) ->
     io:format("Got ping~n",[]),
-    _TS = chronos:start_timer(State#state.tserver, ping_timer, 1000,
+    _TS = kairos:start_timer(State#state.tserver, ping_timer, 1000,
                              {?MODULE, timer_expiry, [ping_timer]}),
     {reply, ok, State};
 handle_call({timer_expiry,ping_timer}, _From, State) ->
     io:format("Got timer_expiry for ~p~n", [ping_timer]),
-    _TS = chronos:start_timer(State#state.tserver,
+    _TS = kairos:start_timer(State#state.tserver,
                               silence_timer, 30000,
                               {?MODULE, timer_expiry, [silence_timer]}),
     {reply, ok, State};
@@ -73,7 +73,7 @@ handle_info(_Info, State) ->
 
 terminate(normal, State) ->
     io:format("~p terminating due to silence_timeout~n", [?SERVER]),
-    ok = chronos:stop(State#state.tserver),
+    ok = kairos:stop(State#state.tserver),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

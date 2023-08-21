@@ -1,0 +1,8 @@
+{application, kairos, [
+	{description, "kairos - a timer utility for Erlang"},
+	{vsn, "1.0.1"},
+	{modules, [kairos, kairos_command]},
+	{registered, []},
+	{applications, [kernel,stdlib]},
+	{licenses, ["MIT"]}
+]}.

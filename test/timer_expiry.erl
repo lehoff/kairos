@@ -20,8 +20,8 @@
 
 -define(SERVER, ?MODULE).
 
--type server_timer() :: {chronos:server_name(),
-                         chronos:timer_name()}.
+-type server_timer() :: {kairos:server_name(),
+                         kairos:timer_name()}.
 
 -type time_stamp() :: pos_integer().
 
@@ -33,10 +33,10 @@
              ]).
 
 -record(state,
-        { servers   = [] :: [chronos:server_name()],
+        { servers   = [] :: [kairos:server_name()],
           started   = [] :: [ unique_timer() ],
           durations = [] :: [{unique_timer(),
-                              chronos:timer_duration()}],
+                              kairos:timer_duration()}],
           restarted = [] :: [ {unique_timer(), time_stamp()} ],
           stopped   = [] :: [ {unique_timer(), time_stamp()} ],
           expired   = [] :: [ {unique_timer(), time_stamp()} ]
@@ -82,19 +82,19 @@ init([]) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call({start_server, ServerName}, _From, State) ->
-    case chronos:start_link(ServerName) of
+    case kairos:start_link(ServerName) of
         {ok, _Pid} ->
             {reply, ok, State#state{servers = [ServerName | State#state.servers]}};
         Other ->
             {reply, Other, State}
     end;
 handle_call({stop_server, Server}, _From, State) ->
-    chronos:stop(Server),
+    kairos:stop(Server),
     {reply, ok, State#state{servers = lists:delete(Server, State#state.servers)}};
 handle_call({start_timer, {Server, Timer, Duration}}, _From, State) ->
     Now = time_stamp(),
     Reply =
-        case chronos:start_timer(Server, Timer, Duration,
+        case kairos:start_timer(Server, Timer, Duration,
                                  {timer_expiry, expire, [Server, Timer, Now]}) of
             ok ->
                 Now;
@@ -123,7 +123,7 @@ handle_call({stop_timer, {Server, Timer}}, _From, State) ->
             {reply, ok, State};
         StartTime ->
             UniqueTimer = {{Server, Timer}, StartTime},
-            Reply = chronos:stop_timer(Server, Timer),
+            Reply = kairos:stop_timer(Server, Timer),
             Now = time_stamp(),
             {reply, Reply, State#state{stopped= [{UniqueTimer, Now} | State#state.stopped ] }}
     end;
@@ -177,7 +177,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
-    [ chronos:stop(Server)
+    [ kairos:stop(Server)
       || Server <- State#state.servers ],
     ok.
 

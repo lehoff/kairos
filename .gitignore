@@ -8,3 +8,8 @@ index.html
 *.js
 variables-ct*
 ct_default.css
+_build
+ct_run.nonode@*
+*.eqc
+suite.log.latest.html
+variables-nonode@nohost
